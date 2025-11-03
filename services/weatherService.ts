@@ -23,7 +23,7 @@ export const getWeatherForLocation = async (latitude: number, longitude: number)
     }
     
     try {
-        const ai = getAi();
+        const ai = await getAi();
         const prompt = `Nhiệm vụ của bạn là tìm thời tiết hiện tại cho một vị trí cụ thể bằng cách tìm kiếm trên internet. TOÀN BỘ câu trả lời của bạn BẮT BUỘC phải ở định dạng: TEMPERATURE;CONDITION;EMOJI.
 - TEMPERATURE là nhiệt độ theo độ C, dưới dạng số.
 - CONDITION là mô tả ngắn gọn bằng tiếng Việt (ví dụ: 'Nắng', 'Mây rải rác', 'Mưa rào').

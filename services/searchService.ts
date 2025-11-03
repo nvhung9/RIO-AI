@@ -37,7 +37,8 @@ export const performGoogleSearch = async (query: string, onStreamUpdate: (text: 
 
     let fullText = '';
     try {
-        const response = await getAi().models.generateContentStream({
+        const ai = await getAi();
+        const response = await ai.models.generateContentStream({
             model: "gemini-2.5-flash",
             contents: prompt,
             config: {
@@ -86,7 +87,7 @@ export const findYouTubeVideo = async (query: string): Promise<{id: string, titl
     let responseText = '';
 
     try {
-        const ai = getAi();
+        const ai = await getAi();
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
             contents: prompt,

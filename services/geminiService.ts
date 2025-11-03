@@ -1,6 +1,6 @@
 // File chính cho Gemini AI Service
-// Đã được refactor để chia nhỏ thành các module riêng biệt
-import { GoogleGenAI, Modality } from "@google/genai";
+// Được tối ưu để chỉ tải SDK Gemini khi thực sự cần thiết nhằm giảm kích thước bundle ban đầu
+import type { GoogleGenAI } from '@google/genai';
 import { decode, decodeAudioData } from './audioUtils';
 
 // --- Re-export từ các module khác để giữ backward compatibility ---
@@ -15,15 +15,41 @@ export {
     getConversationHistory
 } from './liveSessionService';
 
-// --- Core Gemini AI Instance ---
-let aiInstance: GoogleGenAI | null = null;
+// --- Lazy load Gemini SDK để giảm bundle ---
+type GenAiRuntime = typeof import('@google/genai');
 
-export const getAi = (): GoogleGenAI => {
+let runtimePromise: Promise<GenAiRuntime> | null = null;
+let runtimeInstance: GenAiRuntime | null = null;
+let aiInstance: GoogleGenAI | null = null;
+let modalityInstance: GenAiRuntime['Modality'] | null = null;
+
+const loadRuntime = async (): Promise<GenAiRuntime> => {
+    if (runtimeInstance) return runtimeInstance;
+    if (!runtimePromise) {
+        runtimePromise = import('@google/genai');
+    }
+    runtimeInstance = await runtimePromise;
+    return runtimeInstance;
+};
+
+export const getGenAiRuntime = async (): Promise<GenAiRuntime> => {
+    return loadRuntime();
+};
+
+export const getModality = async (): Promise<GenAiRuntime['Modality']> => {
+    if (modalityInstance) return modalityInstance;
+    const runtime = await loadRuntime();
+    modalityInstance = runtime.Modality;
+    return modalityInstance;
+};
+
+export const getAi = async (): Promise<GoogleGenAI> => {
     if (aiInstance) return aiInstance;
+    const runtime = await loadRuntime();
     if (!process.env.API_KEY) {
         throw new Error("Biến môi trường API_KEY chưa được đặt.");
     }
-    aiInstance = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    aiInstance = new runtime.GoogleGenAI({ apiKey: process.env.API_KEY });
     return aiInstance;
 };
 
@@ -39,7 +65,10 @@ export const availableVoices = [
 // --- Text-to-Speech Test ---
 export const textToSpeechTest = async (voiceName: string): Promise<void> => {
     try {
-        const ai = getAi();
+        const [ai, Modality] = await Promise.all([
+            getAi(),
+            getModality(),
+        ]);
         const testText = 'Alo alo một hai ba bốn, Rio đang test loa, mọi người nghe rõ Rio nói gì không ạ';
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash-preview-tts",

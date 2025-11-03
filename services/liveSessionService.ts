@@ -1,12 +1,12 @@
 // Dịch vụ quản lý live session với Gemini AI
-import { GoogleGenAI, Modality, LiveServerMessage } from "@google/genai";
+import type { LiveServerMessage } from '@google/genai';
 import { RioState, UserProfile, ChatMessage, IPTVChannel } from '../types';
 import * as alarmService from './alarmService';
 import * as iptvService from './iptvService';
-import { getAi } from './geminiService';
+import { getAi, getModality } from './geminiService';
 import { decode, decodeAudioData, createBlob } from './audioUtils';
 import { performGoogleSearch, findYouTubeVideo, setSearchCallbacks } from './searchService';
-import { allFunctionDeclarations } from './functionDeclarations';
+import { loadFunctionDeclarations } from './functionDeclarations';
 import { saveChatHistory, getChatHistory } from './indexedDBService';
 import { 
     initializeWakeWordDetection, 
@@ -519,7 +519,11 @@ export const startLiveSession = async (
         }
     });
 
-    const ai = getAi();
+    const [ai, Modality, functionDeclarations] = await Promise.all([
+        getAi(),
+        getModality(),
+        loadFunctionDeclarations(),
+    ]);
     
     // Load conversation history
     try {
@@ -640,7 +644,7 @@ export const startLiveSession = async (
                 systemInstruction,
                 responseModalities: [Modality.AUDIO],
                 speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: selectedVoice } } },
-                tools: [{ functionDeclarations: allFunctionDeclarations }],
+                tools: [{ functionDeclarations }],
                 inputAudioTranscription: {},
                 outputAudioTranscription: {},
             },

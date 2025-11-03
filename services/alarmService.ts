@@ -1,5 +1,4 @@
-import { Modality } from "@google/genai";
-import { getAi } from './geminiService';
+import { getAi, getModality } from './geminiService';
 import { RioState } from '../types';
 
 interface Alarm {
@@ -87,7 +86,10 @@ async function decodeAudioData(
 
 const speak = async (text: string): Promise<void> => {
     try {
-        const ai = getAi();
+        const [ai, Modality] = await Promise.all([
+            getAi(),
+            getModality(),
+        ]);
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash-preview-tts",
             contents: [{ parts: [{ text }] }],

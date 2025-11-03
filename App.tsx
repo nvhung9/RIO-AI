@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, Suspense, lazy } from 'react';
 import RioDisplay from './components/RioDisplay';
 import { UserInfoForm } from './components/UserInfoForm';
 import { EphemeralDisplay } from './components/EphemeralDisplay';
@@ -9,14 +9,8 @@ import * as iptvService from './services/iptvService';
 import { getChatHistory, clearChatHistory } from './services/indexedDBService';
 import Clock from './components/Clock';
 import { DeepSleepRio } from './components/RioExpressions';
-import { IPTVPlayer } from './components/IPTVPlayer';
-import { YouTubePlayer } from './components/YouTubePlayer';
 import { WakeRioTvButton } from './components/WakeRioTvButton';
 import { FullscreenButton } from './components/FullscreenButton';
-import { SettingsModal } from './components/Controls';
-import { ChatHistoryModal } from './components/ChatLog';
-import { RioGallery } from './components/RioGallery';
-import { RioCreator } from './components/RioCreator';
 
 const SettingsIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -41,6 +35,20 @@ const CreatorIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
     </svg>
+);
+
+
+const SettingsModal = lazy(() => import('./components/Controls').then(module => ({ default: module.SettingsModal })));
+const ChatHistoryModal = lazy(() => import('./components/ChatLog').then(module => ({ default: module.ChatHistoryModal })));
+const RioGallery = lazy(() => import('./components/RioGallery').then(module => ({ default: module.RioGallery })));
+const RioCreator = lazy(() => import('./components/RioCreator').then(module => ({ default: module.RioCreator })));
+const IPTVPlayer = lazy(() => import('./components/IPTVPlayer').then(module => ({ default: module.IPTVPlayer })));
+const YouTubePlayer = lazy(() => import('./components/YouTubePlayer').then(module => ({ default: module.YouTubePlayer })));
+
+const renderModalFallback = (message: string) => (
+    <div className="fixed inset-0 flex items-center justify-center bg-black/60 text-white z-50">
+        <div className="animate-pulse text-lg font-semibold">{message}</div>
+    </div>
 );
 
 
@@ -629,21 +637,25 @@ const App: React.FC = () => {
         />
 
         {isSettingsVisible && (
-            <SettingsModal
-                profile={userProfile}
-                onSave={handleSaveSettings}
-                onClearHistory={handleClearHistory}
-                onClose={() => setIsSettingsVisible(false)}
-            />
+            <Suspense fallback={renderModalFallback('Đang tải bảng cài đặt...')}>
+                <SettingsModal
+                    profile={userProfile}
+                    onSave={handleSaveSettings}
+                    onClearHistory={handleClearHistory}
+                    onClose={() => setIsSettingsVisible(false)}
+                />
+            </Suspense>
         )}
         
         {isHistoryVisible && (
-            <ChatHistoryModal
-                history={chatHistory}
-                onClose={() => setIsHistoryVisible(false)}
-                userName={userProfile.name}
-                rioName={userProfile.rioName || 'Rio'}
-            />
+            <Suspense fallback={renderModalFallback('Đang tải lịch sử trò chuyện...')}>
+                <ChatHistoryModal
+                    history={chatHistory}
+                    onClose={() => setIsHistoryVisible(false)}
+                    userName={userProfile.name}
+                    rioName={userProfile.rioName || 'Rio'}
+                />
+            </Suspense>
         )}
 
         {isGalleryVisible && (
@@ -656,7 +668,9 @@ const App: React.FC = () => {
                     >
                         &times;
                     </button>
-                    <RioGallery />
+                    <Suspense fallback={<div className="w-full h-full flex items-center justify-center text-white animate-pulse">Đang tải gallery...</div>}>
+                        <RioGallery />
+                    </Suspense>
                 </div>
             </div>
         )}
@@ -671,7 +685,9 @@ const App: React.FC = () => {
                     >
                         &times;
                     </button>
-                    <RioCreator />
+                    <Suspense fallback={<div className="w-full h-full flex items-center justify-center text-white animate-pulse">Đang tải trình tạo biểu cảm...</div>}>
+                        <RioCreator />
+                    </Suspense>
                 </div>
             </div>
         )}
@@ -759,23 +775,27 @@ const App: React.FC = () => {
 
                     <div className={`w-full flex items-center justify-center landscape:h-auto landscape:max-h-[80vh] ${isTvFullscreen ? 'landscape:w-full landscape:max-h-screen h-full' : 'landscape:w-1/2'}`}>
                         {currentChannel ? (
-                            <IPTVPlayer 
-                                channel={currentChannel} 
-                                isExternallyPaused={!isTvPlaying}
-                                channels={allChannels}
-                                onChannelSelect={setCurrentChannel}
-                                onClose={handleCloseTvPlayer}
-                                isTvFullscreen={isTvFullscreen}
-                                onToggleFullscreen={handleToggleTvFullscreen}
-                                volume={volume}
-                                onVolumeChange={setVolume}
-                            />
+                            <Suspense fallback={<div className="w-full h-full flex items-center justify-center text-white animate-pulse">Đang khởi động kênh TV...</div>}>
+                                <IPTVPlayer 
+                                    channel={currentChannel} 
+                                    isExternallyPaused={!isTvPlaying}
+                                    channels={allChannels}
+                                    onChannelSelect={setCurrentChannel}
+                                    onClose={handleCloseTvPlayer}
+                                    isTvFullscreen={isTvFullscreen}
+                                    onToggleFullscreen={handleToggleTvFullscreen}
+                                    volume={volume}
+                                    onVolumeChange={setVolume}
+                                />
+                            </Suspense>
                         ) : currentYouTubeVideo ? (
-                            <YouTubePlayer 
-                                video={currentYouTubeVideo} 
-                                onClose={handleCloseYouTubePlayer} 
-                                volume={volume}
-                            />
+                            <Suspense fallback={<div className="w-full h-full flex items-center justify-center text-white animate-pulse">Đang mở YouTube...</div>}>
+                                <YouTubePlayer 
+                                    video={currentYouTubeVideo} 
+                                    onClose={handleCloseYouTubePlayer} 
+                                    volume={volume}
+                                />
+                            </Suspense>
                         ) : (
                             rioState === RioState.IDLE ? (
                                 <div className="hidden landscape:flex w-full h-full items-center justify-center">
