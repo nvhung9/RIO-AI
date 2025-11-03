@@ -1,0 +1,8 @@
+{
+  "name": "Rio AI",
+  "description": "Rio for web",
+  "requestFramePermissions": [
+    "microphone",
+    "geolocation"
+  ]
+}
